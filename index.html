@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>調移單生成器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body { font-family: '微軟正黑體', 'PingFang TC', sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        h2 { text-align: center; color: #333; }
+        .form-group { display: flex; align-items: center; justify-content: flex-start; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+        label { font-weight: bold; width: 80px; }
+        input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; flex-grow: 1; }
+        button { padding: 10px 15px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; color: white; transition: 0.3s; }
+        .btn-add { background-color: #4CAF50; width: 100%; margin-bottom: 20px; }
+        .btn-add:hover { background-color: #45a049; }
+        .btn-export { background-color: #2196F3; width: 100%; }
+        .btn-export:hover { background-color: #0b7dda; }
+        /* 準備匯出 PDF 的區塊 */
+        #pdf-content { padding: 20px; background: white; min-height: 200px; border: 1px dashed #ccc; margin-bottom: 20px; }
+        #pdf-content h3 { text-align: center; margin-bottom: 20px; }
+        .record-item { font-size: 14px; margin-bottom: 10px; line-height: 1.5; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .delete-btn { color: red; cursor: pointer; font-size: 12px; float: right; }
+        /* 匯出 PDF 時隱藏刪除按鈕 */
+        .pdf-exporting .delete-btn { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📆 調移單生成器</h2>
+    
+    <div class="form-group">
+        <label>原始日期:</label>
+        <input type="date" id="origDate">
+    </div>
+
+    <div class="form-group">
+        <label>調移至:</label>
+        <input type="date" id="targetDate">
+    </div>
+
+    <button class="btn-add" onclick="addRecord()">➕ 加入列表</button>
+
+    <div id="pdf-content">
+        <h3>員工調移單</h3>
+        <div id="records-list"></div>
+    </div>
+
+    <button class="btn-export" onclick="exportPDF()">📄 下載 PDF</button>
+</div>
+
+<script>
+    // 將 YYYY-MM-DD 轉成 4/11（六）
+    function formatTWDate(dateStr) {
+        if (!dateStr) return "";
+        const date = new Date(dateStr);
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const weekdays = ['（日）', '（一）', '（二）', '（三）', '（四）', '（五）', '（六）'];
+        const weekday = weekdays[date.getDay()];
+        return `${month}/${day}${weekday}`;
+    }
+
+    function addRecord() {
+        const origDate = document.getElementById('origDate').value;
+        const targetDate = document.getElementById('targetDate').value;
+
+        if (!origDate || !targetDate) {
+            alert("請完整選擇原始日期與調移日期！");
+            return;
+        }
+
+        const origStr = formatTWDate(origDate);
+        const targetStr = formatTWDate(targetDate);
+        
+        // 將假別固定為「放假日」
+        const text = `${origStr}放假日調移至${targetStr}，${targetStr}變更為放假日`;
+
+        const listDiv = document.getElementById('records-list');
+        const newItem = document.createElement('div');
+        newItem.className = 'record-item';
+        newItem.innerHTML = `<span>${text}</span> <span class="delete-btn" onclick="this.parentElement.remove()">[刪除]</span>`;
+        
+        listDiv.appendChild(newItem);
+    }
+
+    function exportPDF() {
+        const listDiv = document.getElementById('records-list');
+        if (listDiv.children.length === 0) {
+            alert("請先加入至少一筆調移紀錄！");
+            return;
+        }
+
+        const element = document.getElementById('pdf-content');
+        element.classList.add('pdf-exporting'); // 隱藏刪除按鈕
+
+        const opt = {
+            margin:       15,
+            filename:     '調移單_輸出.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        // 生成 PDF 並在完成後恢復介面
+        html2pdf().set(opt).from(element).save().then(() => {
+            element.classList.remove('pdf-exporting');
+        });
+    }
+</script>
+
+</body>
+</html>
